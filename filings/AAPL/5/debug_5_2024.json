@@ -1,0 +1,60 @@
+{
+  "ticker": "AAPL",
+  "formType": "5",
+  "accessionNo": "0000320193-24-000102",
+  "cik": "320193",
+  "companyNameLong": "Apple Inc. (Issuer)",
+  "companyName": "Apple Inc.",
+  "linkToFilingDetails": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000102/xslF345X05/wk-form5_1727822122.xml",
+  "description": "Form 5 - Annual statement of changes in beneficial ownership of securities",
+  "linkToTxt": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000102/0000320193-24-000102.txt",
+  "filedAt": "2024-10-01T18:35:29-04:00",
+  "documentFormatFiles": [
+    {
+      "sequence": "1",
+      "size": "\u00a0",
+      "documentUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000102/xslF345X05/wk-form5_1727822122.xml",
+      "description": "FORM 5",
+      "type": "5"
+    },
+    {
+      "sequence": "1",
+      "size": "3912",
+      "documentUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000102/wk-form5_1727822122.xml",
+      "description": "FORM 5",
+      "type": "5"
+    },
+    {
+      "sequence": "\u00a0",
+      "size": "5489",
+      "documentUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000102/0000320193-24-000102.txt",
+      "description": "Complete submission text file",
+      "type": "\u00a0"
+    }
+  ],
+  "periodOfReport": "2024-09-28",
+  "entities": [
+    {
+      "fiscalYearEnd": "0928",
+      "stateOfIncorporation": "CA",
+      "cik": "320193",
+      "irsNo": "942404110",
+      "companyName": "Apple Inc. (Issuer)",
+      "sic": "3571 Electronic Computers",
+      "undefined": "06 Technology)"
+    },
+    {
+      "act": "34",
+      "cik": "1059235",
+      "fileNo": "001-36743",
+      "companyName": "WAGNER SUSAN (Reporting)",
+      "type": "5",
+      "filmNo": "241344759"
+    }
+  ],
+  "id": "485115cb167fe3ff0a4ec030ccff04b2",
+  "seriesAndClassesContractsInformation": [],
+  "linkToHtml": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000102/0000320193-24-000102-index.htm",
+  "linkToXbrl": "",
+  "dataFiles": []
+}
