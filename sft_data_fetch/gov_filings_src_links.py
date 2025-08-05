@@ -6,7 +6,6 @@ import time
 from tqdm import tqdm
 from itertools import cycle
 
-# Setup logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)-8s %(message)s",
@@ -33,7 +32,7 @@ OUTPUT_DIR = "./links"
 EMAILS = ["link.generator1@gmail.com", "link.generator2@gmail.com", "link.generator3@gmail.com",
            "link.generator4@gmail.com", "link.generator5@gmail.com", "link.generator6@gmail.com"]
 EMAIL_CYCLE = cycle(EMAILS)
-EMAIL_ROTATE_EVERY = 15
+EMAIL_ROTATE_EVERY = 18
 
 
 def parse_idx_line_fixed(line):
@@ -133,7 +132,7 @@ def generate_links():
         all_links.setdefault(ticker, {}).setdefault(form, {}).setdefault(year, {})
         all_links[ticker][form][year][download_key] = file_url
 
-        time.sleep(1)
+        time.sleep(0.9)
 
     for ticker, forms in all_links.items():
         save_dir = os.path.join(OUTPUT_DIR, ticker)

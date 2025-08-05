@@ -8,9 +8,12 @@ import subprocess
 from pathlib import Path
 
 # COMMON CONFIGURATION 
-
+#process all tickers
 # Tickers to process — empty list means all
-TICKERS_TO_PROCESS = ["AAPL"]  # set [] to process all tickers
+TICKERS_TO_PROCESS = [
+    "WMT", "AMZN", "UNH", "AAPL", "CVS", "BRK.B", "GOOGL", "XOM",
+    "MCK", "COR", "JPM", "COST", "CI", "MSFT", "CAH"
+]
 
 # Shared directories
 FILINGS_DIR = "filings/filings"
