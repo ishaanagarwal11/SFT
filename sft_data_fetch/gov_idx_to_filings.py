@@ -1,5 +1,3 @@
-# getfiles
-
 import os
 import logging
 import requests
@@ -7,8 +5,8 @@ import time
 from tqdm import tqdm
 from bs4 import BeautifulSoup
 from itertools import cycle
+from config import CIK_MAP, EMAILS, EMAILS_TO_USE, CALLS_PER_EMAIL, SELECTED_TICKERS, SELECTED_FORMS, SELECTED_YEARS, RETRY_LIMIT, SLEEP_TIME
 
-# Setup logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)-8s %(message)s",
@@ -18,26 +16,11 @@ logging.basicConfig(
     ]
 )
 
-# Constants
-CIK_MAP = {
-    "WMT": "0000104169", "AMZN": "0001018724", "UNH": "0000731766", "AAPL": "0000320193",
-    "CVS": "0000064803", "BRK.B": "0001067983", "GOOGL": "0001652044", "XOM": "0000034088",
-    "MCK": "0000927653", "COR": "0001355839", "JPM": "0000019617", "COST": "0000909832",
-    "CI": "0001739940", "MSFT": "0000789019", "CAH": "0000721371"
-}
-CIK_SET = set(CIK_MAP.values())
-FORM_TYPES = {"10-K", "10-Q", "8-K", "DEF 14A", "3", "4", "5"}
-
+CIK_SET = {CIK_MAP[ticker] for ticker in SELECTED_TICKERS}
 SEC_PREFIX = "https://www.sec.gov/Archives/"
-IDX_DIR = "./idx"
-OUTPUT_DIR = "./tes1t"
-
-EMAILS = [
-    "filings.download1@example.com", "filings.download2@example.com"
-]
-EMAIL_CYCLE = cycle(EMAILS)
-EMAIL_ROTATE_EVERY = 15
-
+IDX_DIR = "./data/idx"
+OUTPUT_DIR = "./data/filings"
+EMAIL_CYCLE = cycle(EMAILS[:EMAILS_TO_USE]) 
 
 def parse_idx_line_fixed(line):
     """Parse fixed-width fields in .idx line"""
@@ -60,15 +43,18 @@ def parse_idx_line_fixed(line):
 
 
 def is_valid_entry(entry):
+    """Check if the entry matches the required filters."""
     return (
         entry
         and entry["cik"] in CIK_SET
-        and entry["form"] in FORM_TYPES
-        and entry["date"][:4].isdigit()
+        and entry["form"] in SELECTED_FORMS
+        and int(entry["date"][:4]) in map(int, SELECTED_YEARS)
     )
 
+        
 
 def process_idx_file(idx_path, matches):
+    """Process IDX file to extract matching entries."""
     logging.info(f"Scanning index file: {idx_path}")
     with open(idx_path, encoding='latin-1') as f:
         for line in f:
@@ -78,7 +64,7 @@ def process_idx_file(idx_path, matches):
 
 
 def find_filings_in_idx():
-    """Find all matching filings"""
+    """Find all matching filings in IDX files."""
     matches = []
     for root, _, files in os.walk(IDX_DIR):
         for fname in files:
@@ -114,7 +100,7 @@ def download_filing(entry, user_agent):
     txt_url = f"{base_url}/{accession}.txt"
     headers = {"User-Agent": user_agent}
 
-    for attempt in range(3):
+    for attempt in range(RETRY_LIMIT):
         try:
             response = requests.get(txt_url, headers=headers, timeout=15)
             response.raise_for_status()
@@ -144,25 +130,31 @@ def download_filing(entry, user_agent):
                     f"File fetch failed or empty content: {file_url}"
                 )
         except Exception as e:
-            logging.warning(f"Attempt {attempt + 1}/3 failed for {txt_url} → {e}")
+            logging.warning(f"Attempt {attempt + 1}/{RETRY_LIMIT} failed for {txt_url} → {e}")
             time.sleep(1 + attempt)
 
-    logging.error(f"Failed after 3 retries: {txt_url}")
+    logging.error(f"Failed after {RETRY_LIMIT} retries: {txt_url}")
 
 
-def main():
-    filings = find_filings_in_idx()
+def download_filings(progress_bar):
+    filings = find_filings_in_idx() 
     logging.info(f"Found {len(filings)} matching filings.")
     email = next(EMAIL_CYCLE)
-    for i, entry in enumerate(tqdm(filings, desc="Downloading filings")):
-        if i % EMAIL_ROTATE_EVERY == 0:
+    total_steps = len(filings)
+    
+    if progress_bar:
+        progress_bar.progress(0) 
+
+    for i, entry in enumerate(filings):
+        if i % CALLS_PER_EMAIL == 0:
             email = next(EMAIL_CYCLE)
             logging.info(f"Switching User-Agent email to: {email}")
-        download_filing(entry, user_agent=email)
-        time.sleep(1)
+        
+        download_filing(entry, user_agent=email)  
+        
+        if progress_bar:
+            progress_bar.progress((i + 1) / total_steps)
+            time.sleep(SLEEP_TIME) 
+
 
     logging.info("All filings downloaded.")
-
-
-if __name__ == "__main__":
-    main()

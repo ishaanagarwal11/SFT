@@ -1,143 +1,80 @@
-import json
-import pathlib
-import faiss
-import numpy as np
-import requests
-import logging
-from typing import List, Dict
+import streamlit as st
+from gov_idx_download import download_idx  # Import the download function
 
+# Fixed list of emails
+EMAILS = [
+    "idx.downloader1@example.com", "idx.downloader2@example.com", "idx.downloader3@example.com",
+    "idx.downloader4@example.com", "idx.downloader5@example.com", "idx.downloader6@example.com",
+    "idx.downloader7@example.com", "idx.downloader8@example.com", "idx.downloader9@example.com", 
+    "idx.downloader10@example.com"
+]
 
-# CONFIGURATION
-EMBED_MODEL = "nomic-embed-text"
-GEN_MODEL = "gemma3"
-OLLAMA_URL = "http://localhost:11434"
+# Set of available tickers and form types
+TICKERS_LIST = ["WMT", "AMZN", "UNH", "AAPL", "CVS", "BRK.B", "GOOGL", "XOM", "MCK", "COR", "JPM", "COST", "CI", "MSFT", "CAH"]
+FORM_TYPES_LIST = ["10-K", "10-Q", "8-K", "DEF 14A", "3", "4", "5"]
 
-INDEX_PATH = pathlib.Path("faiss_index.index")
-METADATA_PATH = pathlib.Path("faiss_metadata.json")
+# Set up the app's initial state
+if "file_status" not in st.session_state:
+    st.session_state.file_status = None
 
-TOP_K = 50
-MAX_CONTEXT_CHARS = 50000
+# Streamlit Inputs for user to select options
+st.title("SEC Index Fetcher")
+st.header("Fetch and download SEC .idx files")
 
+# Select emails to cycle through
+email_cycle_count = st.selectbox(
+    "Select number of emails to cycle through",
+    [2, 5, 10],  # User can select how many emails to cycle through
+    index=2  # Default to 10 emails
+)
 
-# LOGGING SETUP
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-log = logging.getLogger(__name__)
+# Select the number of API calls per email
+calls_per_email = st.selectbox(
+    "Select number of API calls per email",
+    [10, 15],  # User can select the calls per email
+    index=1  # Default to 15 calls
+)
 
+# Select tickers to process
+selected_tickers = st.multiselect(
+    "Select tickers to process",
+    TICKERS_LIST,
+    default=TICKERS_LIST  # Default to all tickers
+)
 
-# HELPER FUNCTIONS
-def embed_query(text: str) -> np.ndarray:
-    """Embed the query using the `nomic-embed-text` model."""
-    try:
-        resp = requests.post(
-            f"{OLLAMA_URL}/api/embeddings",
-            json={"model": EMBED_MODEL, "prompt": text, "stream": False},
-            timeout=30,
-        )
-        resp.raise_for_status()
-        return np.array(resp.json()["embedding"], dtype="float32")
-    except requests.exceptions.RequestException as e:
-        log.error(f"Error embedding query: {e}")
-        raise
+# Select form types to process
+selected_forms = st.multiselect(
+    "Select form types to process",
+    FORM_TYPES_LIST,
+    default=FORM_TYPES_LIST  # Default to all forms
+)
 
+# Retry settings
+RETRY_LIMIT = st.number_input('Retry Limit', min_value=1, max_value=10, value=3)
+RETRY_BACKOFF = st.number_input('Retry Backoff (seconds)', min_value=1, max_value=5, value=1)
 
-def generate_answer(question: str, context: str) -> str:
-    """Generate a detailed, insightful, and actionable answer using context and question."""
-    
-    prompt = f"""
-    You are a highly skilled AI assistant capable of answering a wide range of questions with detailed, thoughtful, and actionable insights. Your goal is to provide answers that are:
+# Define YEARS here
+YEARS = list(range(2018, 2026))  # The years to fetch the .idx files for
 
-    1. Thorough: Ensure you cover all relevant aspects of the question and provide a comprehensive answer.
-    2. Structured: Organize your response in a clear, logical manner, making it easy for the user to understand.
-    3. Insightful: Offer deep insights into the topic at hand, drawing from all relevant data and knowledge.
-    4. Actionable: Where appropriate, provide recommendations or next steps that could be followed based on the answer.
-    5. Context-Aware: Use the provided context to deliver a response that directly answers the question, even if the query is broad or high-level.
+# Function to call the download_idx and update progress
+def fetch_idx_files():
+    st.session_state.file_status = "Downloading .idx files..."
+    progress_bar = st.progress(0)  # Initialize the progress bar
 
-    HERE IS THE QUESTION AND CONTEXT:
-    dont mention the word "context" in the answer, just use it to generate a good answer.
-    any thing that you talk about in the answer, make sure to mention the company name that it is related to.
+    # Select the emails based on user input
+    selected_emails = EMAILS[:email_cycle_count]  # Use the first `email_cycle_count` emails from the list
 
-    f"\n\nContext:\n{context}\n\n"
-    f"Question: {question}"
+    for progress in download_idx(YEARS, RETRY_LIMIT, RETRY_BACKOFF, selected_emails, calls_per_email):
+        progress_bar.progress(progress)  # Update progress bar in Streamlit
 
-    """
-    
-    try:
-        resp = requests.post(
-            f"{OLLAMA_URL}/api/generate",
-            json={"model": GEN_MODEL, "prompt": prompt, "stream": False},
-            timeout=60,
-        )
-        resp.raise_for_status()
-        return resp.json()["response"].strip()
-    except requests.exceptions.RequestException as e:
-        log.error(f"Error generating answer: {e}")
-        raise
+    st.session_state.file_status = "Index files downloaded successfully!"
+    st.success("All .idx files have been successfully downloaded!")
 
-def load_index_and_metadata() -> tuple[faiss.IndexFlatL2, List[Dict]]:
-    """Load FAISS index and metadata from disk."""
-    try:
-        index = faiss.read_index(str(INDEX_PATH))
-        with open(METADATA_PATH, encoding="utf-8") as f:
-            metadata = json.load(f)
-        return index, metadata
-    except Exception as e:
-        log.error(f"Error loading index or metadata: {e}")
-        raise
+# Trigger the download
+if st.button("Download .IDX Files"):
+    fetch_idx_files()
 
-
-def retrieve_context(query_vec: np.ndarray, index: faiss.IndexFlatL2, metadata: List[Dict]) -> str:
-    """Retrieve top-k relevant chunks from the FAISS index and return them as context."""
-    try:
-        distances, indices = index.search(query_vec, TOP_K)
-        retrieved = []
-        sources = []
-        for idx in indices[0]:
-            if idx >= len(metadata):
-                continue
-            entry = metadata[idx]
-            text = entry["text"].strip()
-            url = entry["meta"].get("source_url", "Unknown source")
-            retrieved.append(text)
-            sources.append(url)
-        
-        context = "\n\n".join(retrieved)[:MAX_CONTEXT_CHARS]
-        return context, sources
-    except Exception as e:
-        log.error(f"Error retrieving context: {e}")
-        raise
-
-
-def ask_question_rag(query: str) -> None:
-    """Ask a question and return an answer using RAG."""
-    log.info(f"Searching for: {query}")
-    query_vec = embed_query(query).reshape(1, -1)
-
-    try:
-        index, metadata = load_index_and_metadata()
-        context, sources = retrieve_context(query_vec, index, metadata)
-        
-        log.info("Generating answer with gemma3...")
-        answer = generate_answer(query, context)
-        
-        log.info("\nAnswer:\n")
-        print(answer)
-
-        log.info("\nSources:")
-        for i, url in enumerate(sources, 1):
-            print(f"{i}. {url}")
-    except Exception as e:
-        log.error(f"Error during question answering: {e}")
-
-
-# MAIN LOOP
-if __name__ == "__main__":
-    try:
-        while True:
-            q = input("\nAsk a question (or type 'exit'): ").strip()
-            if q.lower() in {"exit", "quit"}:
-                log.info("Exiting...")
-                break
-            if q:
-                ask_question_rag(q)
-    except KeyboardInterrupt:
-        log.info("\nExiting...")
+# Display status or logs
+if st.session_state.file_status:
+    st.write(st.session_state.file_status)
+    st.text_area("Log Output", value=f"Fetching files... See progress bar.", height=200)

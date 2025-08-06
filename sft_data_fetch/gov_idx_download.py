@@ -1,26 +1,10 @@
-# direct 
-
 import os
 import time
 import logging
 import requests
 from itertools import cycle
+from config import EMAILS, EMAILS_TO_USE, CALLS_PER_EMAIL, SELECTED_YEARS, RETRY_LIMIT, SLEEP_TIME
 
-# Configuration
-YEARS = list(range(2018, 2026))
-EMAILS = [
-    "idx.downloader1@example.com", "idx.downloader2@example.com"
-]
-EMAIL_CYCLE = cycle(EMAILS)
-
-# Constants
-BASE_DIR = "./"
-RETRY_LIMIT = 3
-RETRY_BACKOFF = 1 
-CALLS_PER_EMAIL = 15
-API_CALL_COUNT = 0
-
-# Logging setup
 timestamp = time.strftime("%Y%m%d_%H%M%S")
 log_filename = f"sec_idx_downloader_{timestamp}.log"
 logging.basicConfig(
@@ -32,22 +16,26 @@ logging.basicConfig(
     ]
 )
 
-HEADERS = {
-    "User-Agent": next(EMAIL_CYCLE)
-}
+EMAILS_TO_CYCLE = EMAILS[:EMAILS_TO_USE]
+EMAIL_CYCLE = cycle(EMAILS_TO_CYCLE)
+
+API_CALL_COUNT = 0
 
 
 def rotate_user_agent():
-    """Rotate User-Agent header every fixed number of API calls."""
-    global API_CALL_COUNT, HEADERS
+    global API_CALL_COUNT
     API_CALL_COUNT += 1
     if API_CALL_COUNT % CALLS_PER_EMAIL == 0:
         HEADERS["User-Agent"] = next(EMAIL_CYCLE)
         logging.info(f"Rotated User-Agent to: {HEADERS['User-Agent']}")
 
-
 def http_get(url):
     """Perform GET request with retry and exponential backoff."""
+    # Define the HEADERS here
+    HEADERS = {
+        "User-Agent": next(EMAIL_CYCLE)
+    }
+    
     for attempt in range(1, RETRY_LIMIT + 1):
         try:
             rotate_user_agent()
@@ -59,12 +47,16 @@ def http_get(url):
             )
         except Exception as exc:
             logging.warning(f"GET request failed for {url} (attempt {attempt}): {exc}")
-        time.sleep(RETRY_BACKOFF)
+        time.sleep(SLEEP_TIME)
     return None
 
 
-def main():
-    for year in YEARS:
+def download_idx_files(progress_bar=None):
+    """Download SEC idx files for selected years and quarters, updating the progress bar."""
+    total_files = len(SELECTED_YEARS) * 4  # 4 quarters per year
+    current_progress = 0
+
+    for year in SELECTED_YEARS:
         for quarter in range(1, 5):
             idx_url = (
                 f"https://www.sec.gov/Archives/edgar/full-index/{year}/QTR{quarter}/company.idx"
@@ -74,7 +66,7 @@ def main():
 
             if idx_text:
                 local_idx_path = os.path.join(
-                    BASE_DIR, "idx", str(year), f"QTR{quarter}", "company.idx"
+                    "./data/idx", str(year), f"QTR{quarter}", "company.idx"
                 )
                 os.makedirs(os.path.dirname(local_idx_path), exist_ok=True)
                 with open(local_idx_path, "w", encoding="utf-8") as f:
@@ -83,6 +75,18 @@ def main():
             else:
                 logging.warning(f"Index file could not be downloaded: {idx_url}")
 
+            if progress_bar:
+                current_progress += 1
+                progress_bar.progress(current_progress / total_files)
+
+            time.sleep(SLEEP_TIME)
+    
+    logging.info("All index files downloaded.")
+
+
+
+def main():
+    download_idx_files(None)
 
 if __name__ == "__main__":
     main()
