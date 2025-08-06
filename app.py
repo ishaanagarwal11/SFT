@@ -1,6 +1,7 @@
 import streamlit as st
 from sft_data_fetch.gov_idx_download import download_idx_files
 from sft_data_fetch.gov_idx_to_filings import download_filings
+from sft_data_fetch.gov_filings_src_links import generate_links
 from itertools import cycle
 import os
 
@@ -17,19 +18,19 @@ def load_config():
     if os.path.exists(CONFIG_PATH) and os.path.getsize(CONFIG_PATH) > 0: 
         with open(CONFIG_PATH, "r") as f:
             for line in f:
-                if line.strip() and "=" in line:
+                if line.strip() and "=" in line: 
                     key, value = line.strip().split(" = ")
                     config_data[key] = eval(value) 
     return config_data
 
 config_data = load_config()
 
-CIK_MAP = config_data.get("CIK_MAP", {
+CIK_MAP ={
     "WMT": "0000104169", "AMZN": "0001018724", "UNH": "0000731766", "AAPL": "0000320193",
     "CVS": "0000064803", "BRK.B": "0001067983", "GOOGL": "0001652044", "XOM": "0000034088",
     "MCK": "0000927653", "COR": "0001355839", "JPM": "0000019617", "COST": "0000909832",
     "CI": "0001739940", "MSFT": "0000789019", "CAH": "0000721371"
-})
+}
 
 TICKERS_LIST = list(CIK_MAP.keys())
 FORM_TYPES_LIST = ["10-K", "10-Q", "8-K", "DEF 14A", "3", "4", "5"]
@@ -62,7 +63,7 @@ calls_per_email = st.selectbox(
 selected_tickers = st.multiselect(
     "Select tickers to process",
     TICKERS_LIST,
-    default=["WMT"] 
+    default=["WMT"] if "WMT" in TICKERS_LIST else []
 )
 
 selected_forms = st.multiselect(
@@ -97,6 +98,11 @@ def fetch_filings():
     progress_bar = st.progress(0)  
     download_filings(progress_bar)  
     st.session_state.file_status = "Filing download complete!"
+
+    generate_links(progress_bar)
+    st.session_state.file_status = "Links generated successfully!"
+    
+
 if st.button("Download Filings"):
     fetch_filings()
 
