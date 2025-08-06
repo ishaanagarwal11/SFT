@@ -136,14 +136,10 @@ def download_filing(entry, user_agent):
     logging.error(f"Failed after {RETRY_LIMIT} retries: {txt_url}")
 
 
-def download_filings(progress_bar):
+def download_filings():
     filings = find_filings_in_idx() 
     logging.info(f"Found {len(filings)} matching filings.")
     email = next(EMAIL_CYCLE)
-    total_steps = len(filings)
-    
-    if progress_bar:
-        progress_bar.progress(0) 
 
     for i, entry in enumerate(filings):
         if i % CALLS_PER_EMAIL == 0:
@@ -151,10 +147,5 @@ def download_filings(progress_bar):
             logging.info(f"Switching User-Agent email to: {email}")
         
         download_filing(entry, user_agent=email)  
-        
-        if progress_bar:
-            progress_bar.progress((i + 1) / total_steps)
-            time.sleep(SLEEP_TIME) 
-
 
     logging.info("All filings downloaded.")

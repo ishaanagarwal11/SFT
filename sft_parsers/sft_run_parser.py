@@ -83,13 +83,6 @@ def run_all_parsers():
         parse10q,
         parsedef14a,
     ]
-    
-    total_files_to_process = sum(
-        len(list((Path(FILINGS_DIR) / ticker / form / str(year)).glob("*.htm")))
-        for ticker in SELECTED_TICKERS if ticker in CIK_MAP
-        for form in SELECTED_FORMS
-        for year in SELECTED_YEARS
-    )
 
     parser()
 

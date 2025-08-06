@@ -91,15 +91,11 @@ def extract_primary_filing_filename(txt_url, form, user_agent):
     return None
 
 
-def generate_links(progress_bar=None):
+def generate_links():
     filings = find_filings_in_idx()
     logging.info(f"Found {len(filings)} matching filings.")
     all_links = {}
     email = next(EMAIL_CYCLE)
-    total_steps = len(filings)
-    
-    if progress_bar:
-        progress_bar.progress(0)
 
     for i, entry in enumerate(filings):
         if i % EMAIL_ROTATE_EVERY == 0:
@@ -132,10 +128,6 @@ def generate_links(progress_bar=None):
 
         time.sleep(SLEEP_TIME)
 
-        if progress_bar:
-            progress_bar.progress((i + 1) / total_steps)
-
-    # Debugging: Show the final directory where files should be saved
     logging.info(f"Current working directory: {os.getcwd()}")
     logging.info(f"Saving links toooo: {OUTPUT_DIR}")
     logging.info(f"Total unique tickers found: {len(all_links)}")
@@ -143,13 +135,11 @@ def generate_links(progress_bar=None):
     for ticker, forms in all_links.items():
         save_dir = os.path.join(OUTPUT_DIR, ticker)
         
-        # Check if directory is being created
         logging.info(f"Creating directory for ticker {ticker}: {save_dir}")
         os.makedirs(save_dir, exist_ok=True)
 
         save_path = os.path.join(save_dir, "links.json")
         
-        # Check the file path before saving
         logging.info(f"Saving links to: {save_path}")
         try:
             with open(save_path, "w") as f:
@@ -160,7 +150,5 @@ def generate_links(progress_bar=None):
 
     logging.info("Link generation completed.")
 
-
-# Example usage
 if __name__ == "__main__":
     generate_links()

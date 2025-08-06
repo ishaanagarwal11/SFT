@@ -51,11 +51,7 @@ def http_get(url):
     return None
 
 
-def download_idx_files(progress_bar=None):
-    """Download SEC idx files for selected years and quarters, updating the progress bar."""
-    total_files = len(SELECTED_YEARS) * 4  # 4 quarters per year
-    current_progress = 0
-
+def download_idx_files():
     for year in SELECTED_YEARS:
         for quarter in range(1, 5):
             idx_url = (
@@ -75,18 +71,6 @@ def download_idx_files(progress_bar=None):
             else:
                 logging.warning(f"Index file could not be downloaded: {idx_url}")
 
-            if progress_bar:
-                current_progress += 1
-                progress_bar.progress(current_progress / total_files)
-
             time.sleep(SLEEP_TIME)
     
     logging.info("All index files downloaded.")
-
-
-
-def main():
-    download_idx_files(None)
-
-if __name__ == "__main__":
-    main()

@@ -1,43 +1,48 @@
 from __future__ import annotations
 import json, logging, os, pathlib, re, sys, traceback
 from collections import defaultdict
-from typing import Any, Dict, List, Tuple
-
+from typing import Dict, List
 import faiss, numpy as np, requests
 from tabulate import tabulate
 from tqdm import tqdm
+from config import SELECTED_TICKERS, SELECTED_FORMS
 
 # USER CONFIG
-TICKERS_TO_PROCESS = [
-    "WMT","AMZN","UNH","AAPL","CVS","BRK.B","GOOGL","XOM",
-    "MCK","COR","JPM","COST","CI","MSFT","CAH"
-]
-FORM_TYPES_TO_PROCESS = ["10-K","10-Q","8-K","3","4","5","DEF 14A"]
+TICKERS_TO_PROCESS = SELECTED_TICKERS
+FORM_TYPES_TO_PROCESS = SELECTED_FORMS
 
-CHUNKS_DIR  = pathlib.Path(os.getenv("CHUNKS_DIR", "chunks"))
+CHUNKS_DIR  = pathlib.Path(os.getenv("CHUNKS_DIR", "data/chunks"))
 OLLAMA_URL  = os.getenv("OLLAMA_URL", "http://localhost:11434/api/embeddings") 
 EMBED_MODEL = "nomic-embed-text"
 
-INDEX_PATH        = pathlib.Path("faiss_index.index")
-METADATA_PATH     = pathlib.Path("faiss_metadata.json")
-LOG_PATH          = pathlib.Path("build_faiss_embeddings.log")
-SKIPPED_JSON_PATH = pathlib.Path("skipped_chunks.json")
-FAILED_JSON_PATH  = pathlib.Path("failed_chunks.json")
+INDEX_PATH        = pathlib.Path("data/faiss/faiss_index.index")
+METADATA_PATH     = pathlib.Path("data/faiss/faiss_metadata.json")
+LOG_PATH          = pathlib.Path("data/faiss/build_faiss_embeddings.log")
+SKIPPED_JSON_PATH = pathlib.Path("data/faiss/skipped_chunks.json")
+FAILED_JSON_PATH  = pathlib.Path("data/faiss/failed_chunks.json")
 
 SAVE_SKIPPED_JSON = True
 SAVE_FAILED_JSON  = True
 MIN_CHARS         = 30    
 
+# Ensure the log directory exists
+log_dir = os.path.dirname(LOG_PATH)
+os.makedirs(log_dir, exist_ok=True)
+
 # LOGGING
-log = logging.getLogger("EmbedAllForms")
-log.setLevel(logging.INFO)
 fh = logging.FileHandler(LOG_PATH, mode="w", encoding="utf-8")
 fh.setFormatter(logging.Formatter("%(asctime)s | %(levelname)-7s | %(message)s"))
 fh.setLevel(logging.INFO)
+
 ch = logging.StreamHandler(sys.stdout)
 ch.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
 ch.setLevel(logging.WARNING)
-log.addHandler(fh); log.addHandler(ch); log.propagate = False
+
+log = logging.getLogger("EmbedAllForms")
+log.setLevel(logging.INFO)
+log.addHandler(fh)
+log.addHandler(ch)
+log.propagate = False
 
 # HELPERS
 def env_override() -> None:
@@ -92,7 +97,12 @@ def embed(text: str) -> List[float]:
     return emb
 
 # MAIN
-def main() -> None:
+def embeddings() -> None:
+    os.makedirs(os.path.dirname(INDEX_PATH), exist_ok=True)
+    os.makedirs(os.path.dirname(METADATA_PATH), exist_ok=True)
+    os.makedirs(os.path.dirname(SKIPPED_JSON_PATH), exist_ok=True)
+    os.makedirs(os.path.dirname(FAILED_JSON_PATH), exist_ok=True)
+
     env_override()
     counts = discover_files()
     if not counts:
@@ -100,7 +110,6 @@ def main() -> None:
         return
     print_counts(counts)
 
-    # Flatten worklist [(form, ticker, Path)]
     work = [(form, tic, fp)
             for form, t_map in counts.items()
             for tic, y_map in t_map.items()
@@ -157,7 +166,6 @@ def main() -> None:
         FAILED_JSON_PATH.write_text(json.dumps(failed_chunks, indent=2, ensure_ascii=False))
         log.info("Failed chunks  → %s", FAILED_JSON_PATH)
 
-    # Summary
     ok_files   = sum(1 for v in file_status.values() if v == "OK")
     fail_files = len(file_status) - ok_files
     idx_msg    = f"{len(vecs):,} vectors saved → {INDEX_PATH}" if vecs else "No vectors created."
@@ -187,6 +195,3 @@ def main() -> None:
     if errors:
         print("\nErrors (condensed):")
         for e in errors: print(" •", e)
-
-if __name__ == "__main__":
-    main()
