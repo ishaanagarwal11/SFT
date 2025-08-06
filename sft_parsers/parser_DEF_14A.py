@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# sft_parsers/parser_DEF_14A.py
 
 from __future__ import annotations
 
@@ -22,12 +22,13 @@ from tabulate import tabulate
 from tqdm import tqdm
 from unidecode import unidecode
 import os
+from config import SELECTED_TICKERS
 
 # CONFIGURATION
-TICKERS_TO_PROCESS: list[str] = ["AAPL"]           
-FILINGS_DIR      = pathlib.Path("filings/filings")   
-LINKS_DIR        = pathlib.Path("links")    
-OUT_DIR          = pathlib.Path("chunks")   
+TICKERS_TO_PROCESS = SELECTED_TICKERS
+FILINGS_DIR = pathlib.Path("./data/filings")
+LINKS_DIR = pathlib.Path("./data/links")
+OUT_DIR = pathlib.Path("./data/chunks")
 LOG_PATH         = pathlib.Path("parse_def14a.log")
 
 TOKEN_LIMIT      = 512                    # max tokens per chunk
@@ -193,7 +194,7 @@ def parse_def14a_file(
 
     accession   = fp.stem.split("_")[-1]
     filing_date = (re.search(r"(\d{8})", accession) or [""])[0]
-    parts       = fp.relative_to(FILINGS_DIR).parts   # <TIC>/DEF 14A/<YR>/…
+    parts       = fp.relative_to(FILINGS_DIR).parts  
     ticker, _, year = parts[:3]
 
     # initialise section containers
@@ -358,7 +359,7 @@ def log_counts(counts: Dict[str, Dict[str, List[pathlib.Path]]]) -> None:
     log.info("\nDetected DEF 14A files\n%s", table)
 
 # MAIN
-def main() -> None:
+def parsedef14a() -> None:
     counts = enumerate_def14a()
     log_counts(counts)
 
@@ -397,5 +398,3 @@ def main() -> None:
         print(f"\nFinished.  Successful: {success}   Failed: {fail}")
         log.info("Finished run.  Successful: %s   Failed: %s", success, fail)
 
-if __name__ == "__main__":
-    main()

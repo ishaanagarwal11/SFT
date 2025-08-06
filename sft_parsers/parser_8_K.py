@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# sft_parsers/parser_8_k.py
 
 from __future__ import annotations
 
@@ -21,12 +21,13 @@ from tqdm import tqdm
 from unidecode import unidecode
 from tabulate import tabulate
 import os
+from config import SELECTED_TICKERS
 
-# CONFIGURATION 
-TICKERS_TO_PROCESS: List[str] = ["AAPL"]         
-FILINGS_DIR      = pathlib.Path("filings/filings")   # <root>/TICKER/8-K/<YEAR>/<file>.htm
-LINKS_DIR        = pathlib.Path("links")     # <root>/TICKER/links.json
-OUT_DIR          = pathlib.Path("chunks")    # output folder
+# CONFIGURATION
+TICKERS_TO_PROCESS = SELECTED_TICKERS
+FILINGS_DIR = pathlib.Path("./data/filings")
+LINKS_DIR = pathlib.Path("./data/links")
+OUT_DIR = pathlib.Path("./data/chunks")  # output folder
 LOG_FILE         = pathlib.Path("parse_8k.log")
 
 TOKEN_LIMIT      = 512                    # chunk size (words)
@@ -359,7 +360,7 @@ def print_counts(counts: Dict[str, Dict[str, List[pathlib.Path]]]):
     log.info("\nDetected 8-K files\n%s", table)
 
 # MAIN
-def main():
+def parse8k():
     counts = enumerate_filings()
     if not counts:
         print("No 8-K filings found with current settings.")
@@ -403,5 +404,3 @@ def main():
         print(f"\nFinished.  Successful: {success}   Failed: {fail}")
         log.info("Finished run.  Successful: %s   Failed: %s", success, fail)
 
-if __name__ == "__main__":
-    main()

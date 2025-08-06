@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+# sft_parsers/parser_5.py
 
 from __future__ import annotations
 
@@ -16,13 +16,14 @@ import xml.etree.ElementTree as ET
 from tabulate import tabulate
 from tqdm import tqdm
 import os
+from config import SELECTED_TICKERS
 
-# CONFIGURATION
-TICKERS_TO_PROCESS: List[str] = ["AAPL"]          
+# CONFIGURATION    
 FILING_TYPE_DIRNAME = "5"                       
-FILINGS_DIR = pathlib.Path("filings/filings") 
-LINKS_DIR   = pathlib.Path("links")          
-OUT_DIR        = pathlib.Path("chunks")          
+TICKERS_TO_PROCESS = SELECTED_TICKERS
+FILINGS_DIR = pathlib.Path("./data/filings")
+LINKS_DIR = pathlib.Path("./data/links")
+OUT_DIR = pathlib.Path("./data/chunks")      
 LOG_FILE       = pathlib.Path("parse_form5.log")
 
 # Tokenisation / chunking
@@ -110,7 +111,7 @@ def parse_form5_xml(fp: pathlib.Path, link_map: Dict[str, str]) -> Tuple[Dict[st
     accession = fp.stem.split("_")[-1]
     filing_date_match = re.search(r"(\d{8})", accession)
     filing_date = filing_date_match.group(1) if filing_date_match else ""
-    rel_parts = fp.relative_to(FILINGS_DIR).parts            # <TICKER>/5/<YEAR>/file.xml
+    rel_parts = fp.relative_to(FILINGS_DIR).parts       
     ticker, _, year = rel_parts[:3]
 
     tree = ET.parse(fp)
@@ -309,7 +310,7 @@ def print_counts(counts: Dict[str, Dict[str, List[pathlib.Path]]]):
     log.info("\nDetected Form 5 files\n%s", table)
 
 # MAIN
-def main():
+def parse5():
     counts = enumerate_filings()
     print_counts(counts)
 
@@ -346,6 +347,3 @@ def main():
     else:
         print(f"\nFinished.  Successful: {success}   Failed: {fail}")
         log.info("Finished run.  Successful: %s   Failed: %s", success, fail)
-
-if __name__ == "__main__":
-    main()

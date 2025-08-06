@@ -1,58 +1,108 @@
-#!/usr/bin/env python3
-"""
-Unified runner for all SEC form parsers in ./parsers/
-"""
-
 import os
-import subprocess
 from pathlib import Path
-
-# COMMON CONFIGURATION 
-#process all tickers
-# Tickers to process — empty list means all
-TICKERS_TO_PROCESS = [
-    "WMT", "AMZN", "UNH", "AAPL", "CVS", "BRK.B", "GOOGL", "XOM",
-    "MCK", "COR", "JPM", "COST", "CI", "MSFT", "CAH"
-]
+from config import (
+    CIK_MAP, SELECTED_TICKERS,
+    SELECTED_FORMS, SELECTED_YEARS
+)
+from .parser_10_K import parse10k
+from .parser_10_Q import parse10q
+from .parser_8_K import parse8k
+from .parser_DEF_14A import parsedef14a
+from .parser_3 import parse3
+from .parser_4 import parse4
+from .parser_5 import parse5
 
 # Shared directories
-FILINGS_DIR = "filings/filings"
-LINKS_DIR = "links"
-OUT_DIR = "chunks"
-
-# Parser script names (must exist in ./parsers)
-PARSER_SCRIPTS = [
-    "parser_3.py",
-    "parser_4.py",
-    "parser_5.py",
-    "parser_8-k.py",
-    "parser_10-k.py",
-    "parser_10-Q.py",
-    "parser_DEF 14A.py",
-]
+FILINGS_DIR = "./data/filings"
+LINKS_DIR = "./data/links"
+OUT_DIR = "./data/chunks"
 
 # ENV SETUP
-
 env = os.environ.copy()
-env["TICKERS_TO_PROCESS"] = ",".join(TICKERS_TO_PROCESS)
 env["FILINGS_DIR"] = FILINGS_DIR
 env["LINKS_DIR"] = LINKS_DIR
 env["OUT_DIR"] = OUT_DIR
 
-parser_dir = Path(__file__).parent / "parsers"
+project_root = Path(__file__).parent.resolve()
+env["PYTHONPATH"] = str(project_root)
 
-# RUN ALL
+def parser():
+    """
+    Download IDX files for the selected tickers and process them.
+    """
+    total_files_to_process = 0
+    processed_files = 0
 
-print("\nLaunching all SEC parsers from ./parsers/\n")
+    selected_tickers = [ticker for ticker in SELECTED_TICKERS if ticker in CIK_MAP]
 
-for script in PARSER_SCRIPTS:
-    script_path = parser_dir / script
-    print(f"\n\nRunning: {script} …")
-    result = subprocess.run(["python3", str(script_path)], env=env)
+    for ticker in selected_tickers:
+        for form in SELECTED_FORMS:
+            for year in SELECTED_YEARS:
+                form_dir = Path(FILINGS_DIR) / ticker / form / str(year)
+                if form_dir.exists() and form_dir.is_dir():
+                    files = list(form_dir.glob("*.htm")) 
+                    total_files_to_process += len(files)
 
-    if result.returncode != 0:
-        print(f"xxxxxxxx{script} failed with exit code {result.returncode}\n")
-    else:
-        print(f"========{script} completed successfully\n")
+    print(f"Total files to process: {total_files_to_process}")
 
-print("All parser scripts finished.")
+    # Process the files
+    for ticker in selected_tickers:
+        cik = CIK_MAP[ticker]
+
+        for form in SELECTED_FORMS:
+            for year in SELECTED_YEARS:
+                form_dir = Path(FILINGS_DIR) / ticker / form / str(year)
+                if form_dir.exists() and form_dir.is_dir():
+                    files = list(form_dir.glob("*.htm"))
+                    for filing_file in files:
+                        try:
+                            print(f"Processing file: {filing_file}")
+                            with open(filing_file, 'r', encoding='utf-8') as file:
+                                content = file.read()
+                            
+                            processed_files += 1
+                        
+                        except Exception as e:
+                            print(f"Error processing file {filing_file}: {e}")
+                            continue
+
+    print(f"Processed {processed_files}/{total_files_to_process} filings.")
+
+def run_all_parsers():
+    """
+    Run all SEC parsers and handle IDX file downloading and parsing.
+    """
+    print("\nLaunching all SEC parsers from ./parsers/\n")
+
+    PARSER_FUNCTIONS = [
+        parse3,
+        parse4,
+        parse5,
+        parse8k,
+        parse10k,
+        parse10q,
+        parsedef14a,
+    ]
+    
+    total_files_to_process = sum(
+        len(list((Path(FILINGS_DIR) / ticker / form / str(year)).glob("*.htm")))
+        for ticker in SELECTED_TICKERS if ticker in CIK_MAP
+        for form in SELECTED_FORMS
+        for year in SELECTED_YEARS
+    )
+
+    parser()
+
+    for parse_func in PARSER_FUNCTIONS:
+        print(f"\n\nRunning: {parse_func.__name__} …")
+        
+        try:
+            parse_func() 
+            print(f"{parse_func.__name__} completed successfully")
+        except Exception as e:
+            print(f"Error: {parse_func.__name__} failed with error: {e}")
+
+    print("All parser functions finished.")
+
+if __name__ == "__main__":
+    run_all_parsers()

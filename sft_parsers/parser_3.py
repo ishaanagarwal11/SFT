@@ -1,7 +1,8 @@
-#!/usr/bin/env python3
+# sft_parsers/parser_3.py
 
 from __future__ import annotations
-
+import sys
+sys.path.append('/SFT') 
 import json
 import logging
 import pathlib
@@ -16,14 +17,14 @@ import xml.etree.ElementTree as ET
 from tabulate import tabulate
 from tqdm import tqdm
 import os
-
+from config import SELECTED_TICKERS
 
 # CONFIGURATION 
-TICKERS_TO_PROCESS: List[str] = ["AAPL"]         
 FILING_TYPE_DIRNAME = "3"                         
-FILINGS_DIR = pathlib.Path("filings/filings")  
-LINKS_DIR = pathlib.Path("links")          
-OUT_DIR        = pathlib.Path("chunks")           
+TICKERS_TO_PROCESS = SELECTED_TICKERS
+FILINGS_DIR = pathlib.Path("./data/filings")
+LINKS_DIR = pathlib.Path("./data/links")
+OUT_DIR = pathlib.Path("./data/chunks")         
 LOG_FILE       = pathlib.Path("parse_form3.log") 
 
 # Tokenisation / chunking
@@ -324,8 +325,7 @@ def print_counts(counts: Dict[str, Dict[str, List[pathlib.Path]]]):
     log.info("\nDetected Form 3 files\n%s", table)
 
 # MAIN 
-
-def main():
+def parse3():
     counts = enumerate_filings()
     print_counts(counts)
 
@@ -363,6 +363,3 @@ def main():
         print(f"\nFinished.  Successful: {success}   Failed: {fail}")
         log.info("Finished run.  Successful: %s   Failed: %s", success, fail)
 
-
-if __name__ == "__main__":
-    main()

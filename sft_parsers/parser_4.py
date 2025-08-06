@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# sft_parsers/parser_4.py
 
 from __future__ import annotations
 
@@ -16,13 +16,14 @@ import xml.etree.ElementTree as ET
 from tabulate import tabulate
 from tqdm import tqdm
 import os
+from config import SELECTED_TICKERS
 
-# CONFIGURATION 
-TICKERS_TO_PROCESS: List[str] = ["AAPL"]         
 FORM_DIRNAME            = "4"                   
-FILINGS_DIR          = pathlib.Path("filings/filings")
-LINKS_DIR            = pathlib.Path("links")
-OUT_DIR                 = pathlib.Path("chunks")
+TICKERS_TO_PROCESS = SELECTED_TICKERS
+
+FILINGS_DIR = pathlib.Path("./data/filings")
+LINKS_DIR = pathlib.Path("./data/links")
+OUT_DIR = pathlib.Path("./data/chunks")
 LOG_FILE                = pathlib.Path("parse_form4.log")
 
 TOKEN_LIMIT             = 512 # per chunk
@@ -116,7 +117,7 @@ def parse_form4_xml(fp: pathlib.Path, link_map: Dict[str, str]) -> Tuple[Dict[st
     accession = fp.stem.split("_")[-1]
     filing_date_match = re.search(r"(\d{8})", accession)
     filing_date = filing_date_match.group(1) if filing_date_match else ""
-    ticker, _, year = fp.relative_to(FILINGS_DIR).parts[:3]  # <TICKER>/4/<YEAR>/file.xml
+    ticker, _, year = fp.relative_to(FILINGS_DIR).parts[:3] 
 
     root = ET.parse(fp).getroot()
 
@@ -334,7 +335,7 @@ def print_counts(counts: Dict[str, Dict[str, List[pathlib.Path]]]):
     log.info("\nDetected Form 4 files\n%s", table)
 
 # MAIN 
-def main():
+def parse4():
     counts = enumerate_filings()
     print_counts(counts)
 
@@ -372,6 +373,3 @@ def main():
         msg = f"\nFinished.  Successful: {success}   Failed: {fail}"
     print(msg)
     log.info(msg.strip())
-
-if __name__ == "__main__":
-    main()

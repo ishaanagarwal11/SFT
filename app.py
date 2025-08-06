@@ -2,6 +2,7 @@ import streamlit as st
 from sft_data_fetch.gov_idx_download import download_idx_files
 from sft_data_fetch.gov_idx_to_filings import download_filings
 from sft_data_fetch.gov_filings_src_links import generate_links
+from sft_parsers.sft_run_parser import run_all_parsers
 from itertools import cycle
 import os
 
@@ -102,9 +103,16 @@ def fetch_filings():
     generate_links(progress_bar)
     st.session_state.file_status = "Links generated successfully!"
     
-
 if st.button("Download Filings"):
     fetch_filings()
+
+
+def run_parsers():
+    run_all_parsers()  
+    st.session_state.file_status = "All parsers executed successfully!"
+if st.button("Run Parsers"):
+    run_parsers()
+
 
 
 save_config({
