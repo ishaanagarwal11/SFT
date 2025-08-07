@@ -6,7 +6,7 @@ from itertools import cycle
 from config import EMAILS, EMAILS_TO_USE, CALLS_PER_EMAIL, SELECTED_YEARS, RETRY_LIMIT, SLEEP_TIME
 
 timestamp = time.strftime("%Y%m%d_%H%M%S")
-log_filename = f"sec_idx_downloader_{timestamp}.log"
+log_filename = "sec_idx_downloader.log"
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(message)s",
