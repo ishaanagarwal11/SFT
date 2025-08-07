@@ -1,5 +1,6 @@
 import streamlit as st
 import os
+import subprocess
 from sft_data_fetch.gov_idx_download import download_idx_files
 from sft_data_fetch.gov_idx_to_filings import download_filings
 from sft_data_fetch.gov_filings_src_links import generate_links
@@ -130,7 +131,6 @@ def chat_mode():
         st.info("Data folder cleared and ready for reprocessing.")
         st.experimental_rerun()  # This will refresh the app after clearing data
 
-# Main app with tabs for Data Processing and QnA
 tabs = st.tabs(["Data Processing", "QnA"])
 
 with tabs[0]:
@@ -138,12 +138,36 @@ with tabs[0]:
 
 with tabs[1]:
     if os.path.exists(FAISS_INDEX_PATH):
-        st.info("FAISS index found! Setting up Ollama...")
-        if run_ollama_commands():
-            st.info("Ollama setup complete!")
+        # Check if gemma3 model is available
+        st.info("Checking for 'gemma3' model...")
+        result_list = subprocess.run(
+            ["ollama", "list"],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+
+        available_models = result_list.stdout
+        gemma_ok = "gemma3" in available_models
+
+        if gemma_ok:
+            st.info("'gemma3' is available. Start chat")
+            chat_mode()
+        else:
+            st.info("'gemma3' not found. Installing...")
+            subprocess.run(
+                ["ollama", "pull", "gemma3"],
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            st.info("'gemma3' installed. You can now start chatting.")
             chat_mode()
     else:
         st.warning("FAISS index not found. Please complete the data processing first.")
+
 
 # Custom CSS to position the clear data button at the bottom right
 st.markdown(
